@@ -1,0 +1,28 @@
+[project]
+name = "vslicer"
+version = "0.1.0"
+description = "Frame-accurate video clipping tool with mpv and ffmpeg"
+readme = "README.md"
+authors = [
+    { name = "lukiqc" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=13.7.0",        # Terminal UI, progress bars, prompts
+    "pyperclip>=1.8.2",    # Clipboard access
+    "pyside6>=6.10.1",
+]
+
+[project.scripts]
+vslicer = "vslicer_cli.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff==0.15.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.11.0"]
+build-backend = "uv_build"
