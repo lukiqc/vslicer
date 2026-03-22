@@ -1,0 +1,41 @@
+# Ruff linter configuration for VSlicer
+# Includes security-focused rules from flake8-bandit
+
+[lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "B",      # flake8-bugbear (common bugs)
+    "C4",     # flake8-comprehensions
+    "S",      # flake8-bandit (security)
+    "UP",     # pyupgrade (modern Python syntax)
+    "PTH",    # flake8-use-pathlib
+    "SIM",    # flake8-simplify
+]
+
+ignore = [
+    "S101",   # Allow assert statements (used in tests and validation)
+    "S603",   # Allow subprocess without shell=True check (we control inputs)
+    "S607",   # Allow subprocess with partial executable path
+    "E501",   # Line length - not critical for security audit
+    "SIM102", # Nested if - stylistic preference
+    "SIM105", # contextlib.suppress - stylistic preference
+    "SIM108", # Ternary operator - can reduce readability
+]
+
+[lint.per-file-ignores]
+"tests/*" = [
+    "S101",   # Allow assert in tests
+    "S105",   # Allow hardcoded passwords in tests
+    "S106",   # Allow hardcoded password arguments in tests
+]
+"src/vslicer_gui/app.py" = [
+    "E402",   # Intentional: logging must be set up before Qt imports
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

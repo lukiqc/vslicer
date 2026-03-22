@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# uv
+.uv/
+
+# AI tooling / CLI state
+.claude/
+.codex/
+
+# Output clips
+clips/
+
+# Media files
+*.webm
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wmv
+*.flv
+*.m4v
+*.ts
+*.mts
+*.m2ts
+*.3gp
+*.ogv
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.m4a
+*.opus
+*.wma
+*.aiff
+
+# Windows shortcuts
+*.lnk
+
+# Temp and local-only directories
+temp/
+docs/
+
+# Logs
+*.log
+
+# Local config
+.env
