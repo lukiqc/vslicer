@@ -1,15 +1,19 @@
-"""Main window for the VSlicer v0.1.0-beta GUI."""
+"""Main window for the VSlicer GUI."""
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import tempfile
+import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-from PySide6.QtCore import Qt, QThread, QTimer
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -62,13 +66,19 @@ from .widgets.video_view import VideoView
 
 logger = get_logger(__name__)
 
+APP_VERSION = "0.1.0-beta"
+_GITHUB_RELEASES_API = "https://api.github.com/repos/lukiqc/vslicer/releases/latest"
+_GITHUB_RELEASES_PAGE = "https://github.com/lukiqc/vslicer/releases"
+
 
 class MainWindow(QMainWindow):
     """Main application window with mpv playback."""
 
+    _update_check_done = Signal(str, str)  # (title, message)
+
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("VSlicer v0.1.0-beta")
+        self.setWindowTitle(f"VSlicer v{APP_VERSION}")
 
         # Set window icon
         icon_path = Path(__file__).parent / "assets" / "icons" / "vslicer_256.ico"
@@ -105,6 +115,7 @@ class MainWindow(QMainWindow):
         self._video_fullscreen = False
         self._incognito_enabled = False
         self._incognito_action: object | None = None
+        self._update_check_action: object | None = None
         self._recent_menu: QMenu | None = None
         self._log_offset = 0
         temp_dir = Path(__file__).resolve().parent.parent / "temp"
@@ -229,6 +240,101 @@ class MainWindow(QMainWindow):
         fullscreen_action = navigate_menu.addAction("&Fullscreen")
         fullscreen_action.setShortcut(QKeySequence("F"))
         fullscreen_action.triggered.connect(self._toggle_fullscreen)
+
+        # Help menu
+        help_menu = QMenu("&Help", self)
+        menu_bar.addMenu(help_menu)
+
+        about_action = help_menu.addAction("&About VSlicer")
+        about_action.triggered.connect(self._show_about)
+
+        self._update_check_action = help_menu.addAction("Check for &Updates")
+        self._update_check_action.triggered.connect(self._check_for_updates)
+
+    def _show_about(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About VSlicer")
+        dialog.setModal(True)
+        dialog.setFixedWidth(400)
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(12)
+
+        title_label = QLabel(f"<b>VSlicer v{APP_VERSION}</b>")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("font-size: 16px;")
+        layout.addWidget(title_label)
+
+        desc_label = QLabel(
+            "Frame-accurate video clipping tool.\n"
+            "Clip and export directly from stream URLs\u2014no download required."
+        )
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
+        link_label = QLabel(
+            '<a href="https://github.com/lukiqc/vslicer">github.com/lukiqc/vslicer</a>'
+        )
+        link_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        link_label.setOpenExternalLinks(True)
+        layout.addWidget(link_label)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+
+        dialog.exec()
+
+    def _check_for_updates(self) -> None:
+        if self._update_check_action is not None:
+            self._update_check_action.setEnabled(False)
+        threading.Thread(target=self._do_update_check, daemon=True).start()
+
+    def _do_update_check(self) -> None:
+        try:
+            req = urllib.request.Request(  # noqa: S310
+                _GITHUB_RELEASES_API,
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "vslicer",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+                data = json.loads(resp.read())
+            tag = data.get("tag_name", "").lstrip("v")
+            if tag == APP_VERSION:
+                self._update_check_done.emit(
+                    "Up to date",
+                    f"You are running the latest version (v{APP_VERSION}).",
+                )
+            else:
+                self._update_check_done.emit(
+                    "Update available",
+                    f"A new version is available: v{tag}\n\n"
+                    f"Visit {_GITHUB_RELEASES_PAGE} to download it.",
+                )
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                self._update_check_done.emit(
+                    "No releases found",
+                    "No releases have been published yet.\n\n"
+                    f"Visit {_GITHUB_RELEASES_PAGE} to check manually.",
+                )
+            else:
+                self._update_check_done.emit(
+                    "Check failed",
+                    f"GitHub returned an error (HTTP {exc.code}). Try again later.",
+                )
+        except Exception:
+            self._update_check_done.emit(
+                "Check failed",
+                "Could not reach GitHub. Check your internet connection and try again.",
+            )
+
+    def _on_update_check_done(self, title: str, message: str) -> None:
+        if self._update_check_action is not None:
+            self._update_check_action.setEnabled(True)
+        QMessageBox.information(self, title, message)
 
     def _volume_up(self) -> None:
         if self.video_view.client:
@@ -387,6 +493,7 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage("Ready")
 
     def _wire_signals(self) -> None:
+        self._update_check_done.connect(self._on_update_check_done)
         self.open_button.clicked.connect(self._open_url)
         self.browse_button.clicked.connect(self._browse_file)
         self.play_button.clicked.connect(self._toggle_play)
@@ -722,12 +829,12 @@ class MainWindow(QMainWindow):
         self._incognito_enabled = enabled
         if enabled:
             set_media_access_policy_override("deny")
-            self.setWindowTitle("VSlicer v0.1.0-beta - Incognito Mode")
+            self.setWindowTitle(f"VSlicer v{APP_VERSION} - Incognito Mode")
             if self._incognito_action is not None:
                 self._incognito_action.setText("Disable Incognito")
         else:
             set_media_access_policy_override(None)
-            self.setWindowTitle("VSlicer v0.1.0-beta")
+            self.setWindowTitle(f"VSlicer v{APP_VERSION}")
             if self._incognito_action is not None:
                 self._incognito_action.setText("Activate Incognito")
         set_incognito_enabled(enabled)
