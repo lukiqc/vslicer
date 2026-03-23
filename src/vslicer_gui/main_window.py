@@ -67,7 +67,7 @@ from .widgets.video_view import VideoView
 logger = get_logger(__name__)
 
 APP_VERSION = "0.1.0-beta"
-_GITHUB_RELEASES_API = "https://api.github.com/repos/lukiqc/vslicer/releases/latest"
+_GITHUB_RELEASES_API = "https://api.github.com/repos/lukiqc/vslicer/releases"
 _GITHUB_RELEASES_PAGE = "https://github.com/lukiqc/vslicer/releases"
 
 
@@ -300,8 +300,14 @@ class MainWindow(QMainWindow):
                 },
             )
             with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
-                data = json.loads(resp.read())
-            tag = data.get("tag_name", "").lstrip("v")
+                releases = json.loads(resp.read())
+            if not releases:
+                self._update_check_done.emit(
+                    "No releases found",
+                    f"No releases have been published yet.\n\nVisit {_GITHUB_RELEASES_PAGE} to check manually.",
+                )
+                return
+            tag = releases[0].get("tag_name", "").lstrip("v")
             if tag == APP_VERSION:
                 self._update_check_done.emit(
                     "Up to date",
@@ -314,17 +320,10 @@ class MainWindow(QMainWindow):
                     f"Visit {_GITHUB_RELEASES_PAGE} to download it.",
                 )
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
-                self._update_check_done.emit(
-                    "No releases found",
-                    "No releases have been published yet.\n\n"
-                    f"Visit {_GITHUB_RELEASES_PAGE} to check manually.",
-                )
-            else:
-                self._update_check_done.emit(
-                    "Check failed",
-                    f"GitHub returned an error (HTTP {exc.code}). Try again later.",
-                )
+            self._update_check_done.emit(
+                "Check failed",
+                f"GitHub returned an error (HTTP {exc.code}). Try again later.",
+            )
         except Exception:
             self._update_check_done.emit(
                 "Check failed",
