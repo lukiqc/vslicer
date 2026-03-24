@@ -971,7 +971,9 @@ class MainWindow(QMainWindow):
         # For livestreams, dump the cache first since ffmpeg can't seek to
         # historical timestamps in a live stream
         if self.video_view.is_livestream:
-            self._log_message("Livestream detected - dumping cache for export...", status=True)
+            self._log_message(
+                "Livestream detected - dumping cache for export...", status=True
+            )
             cache_path = self._dump_livestream_cache()
             if cache_path is None:
                 QMessageBox.warning(
