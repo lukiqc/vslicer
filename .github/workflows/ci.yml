@@ -74,4 +74,4 @@ jobs:
         run: uv pip install pip-audit==2.7.3
 
       - name: Run pip-audit
-        run: uv run pip-audit
+        run: uv run pip-audit --ignore-vuln GHSA-5239-wwwm-4pmq

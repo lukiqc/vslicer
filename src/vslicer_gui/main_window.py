@@ -591,7 +591,6 @@ class MainWindow(QMainWindow):
         self._stream_start_pos = None
         self._seek_target = None
         self._cleanup_cache_dump()
-        self.log_view.clear()
         logger.info("Opening video", extra={"url": url[:200]})  # Truncate long URLs
         try:
             if use_cookies:
@@ -972,7 +971,9 @@ class MainWindow(QMainWindow):
         # For livestreams, dump the cache first since ffmpeg can't seek to
         # historical timestamps in a live stream
         if self.video_view.is_livestream:
-            self.log_view.append("Livestream detected - dumping cache for export...")
+            self._log_message(
+                "Livestream detected - dumping cache for export...", status=True
+            )
             cache_path = self._dump_livestream_cache()
             if cache_path is None:
                 QMessageBox.warning(
