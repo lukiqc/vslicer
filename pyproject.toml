@@ -19,7 +19,7 @@ vslicer = "vslicer_cli.main:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
-    "pytest-cov>=7.0.0",
+    "pytest-cov>=7.1.0",
     "ruff==0.15.6",
 ]
 
